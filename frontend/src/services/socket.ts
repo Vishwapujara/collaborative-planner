@@ -6,11 +6,13 @@ class SocketService {
   private currentTeamId: string | null = null;
 
   connect() {
-    if (!this.socket) {
-      this.socket = io('http://localhost:5000', {
-        transports: ['websocket'],
-        autoConnect: true,
-      });
+  if (!this.socket) {
+    const socketUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    
+    this.socket = io(socketUrl, {
+      transports: ['websocket'],
+      autoConnect: true,
+    });
 
       this.socket.on('connect', () => {
         console.log('✅ Connected to WebSocket server');
