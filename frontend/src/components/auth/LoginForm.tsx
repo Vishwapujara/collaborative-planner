@@ -76,6 +76,19 @@ export const LoginForm: React.FC = () => {
             </div>
           </div>
 
+          <div className="flex items-center">
+            <input
+              id="remember-me"
+              type="checkbox"
+              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 cursor-pointer">
+              Remember me
+            </label>
+          </div>
+
           <div>
             <button
               type="submit"

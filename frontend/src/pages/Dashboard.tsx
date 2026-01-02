@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { useAuth } from '../context/AuthContext';
 import { teamsAPI, projectsAPI, tasksAPI } from '../services/api';
-import type { Team, Project, Task } from '../types';
+import type { Team } from '../types';
 import { Users, FolderKanban, Plus, CheckSquare } from 'lucide-react';
-
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
