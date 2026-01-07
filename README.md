@@ -34,7 +34,7 @@ A real-time collaborative work management platform enabling distributed teams to
 
 ## 🚀 Live Demo
 
-**Frontend:** [Coming soon]
+**Frontend:** collaborative-planner.vercel.app
 **Backend API:** [Coming soon]
 
 ## 📸 Screenshots
