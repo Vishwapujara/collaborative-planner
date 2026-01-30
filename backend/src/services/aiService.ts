@@ -7,7 +7,7 @@ export const generateTaskSuggestions = async (
   existingTasks: string[]
 ): Promise<string[]> => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `
 You are a project management assistant. 
@@ -46,7 +46,7 @@ export const generateTaskDescription = async (
   projectName: string
 ): Promise<string> => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `
 You are a project management assistant.
