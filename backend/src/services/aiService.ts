@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+// 🔍 Log SDK version once at startup (safe to keep)
 console.log(
   '🧠 Gemini SDK version:',
   require('@google/generative-ai/package.json').version
@@ -7,13 +8,18 @@ console.log(
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
+// ✅ Model selection with safe default (free-tier compatible)
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-pro';
+
+/**
+ * Generate task suggestions for a project
+ */
 export const generateTaskSuggestions = async (
   projectName: string,
   existingTasks: string[]
 ): Promise<string[]> => {
   try {
-    // ✅ Use simple model name
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
     const prompt = `
 You are a project management assistant helping a development team.
@@ -31,32 +37,30 @@ Example for "Mobile App Development":
 `;
 
     const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
+    const text = result.response.text();
+
     console.log('🤖 Gemini raw response:', text);
-    
+
     const jsonMatch = text.match(/\[[\s\S]*?\]/);
-    if (jsonMatch) {
-      const suggestions = JSON.parse(jsonMatch[0]);
-      console.log('✅ Parsed suggestions:', suggestions);
-      return suggestions;
-    }
-    
-    console.log('⚠️ Could not parse JSON from response');
-    return [];
+    if (!jsonMatch) return [];
+
+    const suggestions = JSON.parse(jsonMatch[0]);
+    return Array.isArray(suggestions) ? suggestions : [];
   } catch (error) {
-    console.error('❌ Gemini API error:', error);
+    console.error('❌ Gemini API error (task suggestions):', error);
     return [];
   }
 };
 
+/**
+ * Generate a short description for a task
+ */
 export const generateTaskDescription = async (
   taskTitle: string,
   projectName: string
 ): Promise<string> => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
     const prompt = `
 You are a project management assistant.
@@ -71,20 +75,22 @@ Return ONLY the description text, no formatting or extra text.
 `;
 
     const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    return result.response.text().trim();
   } catch (error) {
-    console.error('❌ Gemini API error:', error);
+    console.error('❌ Gemini API error (task description):', error);
     return '';
   }
 };
 
+/**
+ * Generate high-level project insights
+ */
 export const generateProjectInsights = async (
   projectName: string,
   tasks: Array<{ title: string; status: string; priority: string }>
 ): Promise<string> => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
     const todoCount = tasks.filter(t => t.status === 'TODO').length;
     const inProgressCount = tasks.filter(t => t.status === 'IN_PROGRESS').length;
@@ -104,10 +110,9 @@ Be encouraging but realistic.
 `;
 
     const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    return result.response.text().trim();
   } catch (error) {
-    console.error('❌ Gemini API error:', error);
+    console.error('❌ Gemini API error (project insights):', error);
     return '';
   }
 };
