@@ -26,7 +26,6 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^6.8.0",
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
