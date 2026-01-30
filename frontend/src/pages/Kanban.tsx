@@ -6,7 +6,7 @@ import socketService from '../services/socket';
 import type { KanbanBoard, Task } from '../types';
 import { Plus, Wifi, WifiOff, Sparkles, Loader } from 'lucide-react';
 import { getPriorityColor } from '../utils/helpers';
-import { TaskDetailModal } from '../components/tasks/TaskDetailModal';
+import { TaskDetailModal } from '../components/task/TaskDetailModal';
 
 export const Kanban: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
