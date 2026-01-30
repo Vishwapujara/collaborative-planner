@@ -147,5 +147,6 @@ httpServer.listen(PORT, () => {
   console.log(`📂 Project routes: http://localhost:${PORT}/api/projects/*`);
   console.log(`✅ Task routes: http://localhost:${PORT}/api/tasks/*`);
   console.log(`💬 Comment routes: http://localhost:${PORT}/api/comments/*`); 
+  console.log(`🤖 AI routes: http://localhost:${PORT}/api/ai/*`);
 
 });
