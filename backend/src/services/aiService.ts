@@ -7,8 +7,8 @@ export const generateTaskSuggestions = async (
   existingTasks: string[]
 ): Promise<string[]> => {
   try {
-    // ✅ Try without 'models/' prefix
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+    // ✅ Use simple model name
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `
 You are a project management assistant helping a development team.
@@ -31,7 +31,6 @@ Example for "Mobile App Development":
     
     console.log('🤖 Gemini raw response:', text);
     
-    // Extract JSON from response
     const jsonMatch = text.match(/\[[\s\S]*?\]/);
     if (jsonMatch) {
       const suggestions = JSON.parse(jsonMatch[0]);
@@ -52,8 +51,7 @@ export const generateTaskDescription = async (
   projectName: string
 ): Promise<string> => {
   try {
-    // ✅ Consistent model name
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `
 You are a project management assistant.
@@ -81,8 +79,7 @@ export const generateProjectInsights = async (
   tasks: Array<{ title: string; status: string; priority: string }>
 ): Promise<string> => {
   try {
-    // ✅ FIXED: Use same model as others
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const todoCount = tasks.filter(t => t.status === 'TODO').length;
     const inProgressCount = tasks.filter(t => t.status === 'IN_PROGRESS').length;
