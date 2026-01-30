@@ -1,5 +1,10 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+console.log(
+  '🧠 Gemini SDK version:',
+  require('@google/generative-ai/package.json').version
+);
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export const generateTaskSuggestions = async (
