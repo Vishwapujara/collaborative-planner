@@ -1,7 +1,20 @@
-// Groq API using fetch (no SDK needed!)
+// Groq API with TypeScript types
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+
+interface GroqMessage {
+  role: string;
+  content: string;
+}
+
+interface GroqResponse {
+  choices: Array<{
+    message: {
+      content: string;
+    };
+  }>;
+}
 
 export const generateTaskSuggestions = async (
   projectName: string,
@@ -37,11 +50,11 @@ Return ONLY a JSON array with no explanation:
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('❌ Groq API error:', error);
+      console.error('❌ Groq API error:', response.status, error);
       return [];
     }
 
-    const data = await response.json();
+    const data = await response.json() as GroqResponse;
     const text = data.choices[0].message.content;
     
     console.log('🤖 Groq raw response:', text);
@@ -49,7 +62,7 @@ Return ONLY a JSON array with no explanation:
     // Extract JSON array from response
     const jsonMatch = text.match(/\[[\s\S]*?\]/);
     if (jsonMatch) {
-      const suggestions = JSON.parse(jsonMatch[0]);
+      const suggestions = JSON.parse(jsonMatch[0]) as string[];
       console.log('✅ Parsed suggestions:', suggestions);
       return suggestions;
     }
@@ -88,7 +101,11 @@ Return only the description.`
       }),
     });
 
-    const data = await response.json();
+    if (!response.ok) {
+      return '';
+    }
+
+    const data = await response.json() as GroqResponse;
     return data.choices[0].message.content.trim();
   } catch (error) {
     console.error('❌ Groq error:', error);
@@ -127,7 +144,11 @@ Provide brief insight (2-3 sentences) about project progress and recommendations
       }),
     });
 
-    const data = await response.json();
+    if (!response.ok) {
+      return '';
+    }
+
+    const data = await response.json() as GroqResponse;
     return data.choices[0].message.content.trim();
   } catch (error) {
     console.error('❌ Groq error:', error);
