@@ -18,11 +18,16 @@ const app = express();
 const httpServer = createServer(app);
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 5000;
+// Allowed origins for CORS
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://collaborative-planner.vercel.app', // ✨ Add your Vercel URL
+];
 
 // Socket.io setup with CORS
 const io = new Server(httpServer, {
   cors: {
-    origin: 'http://localhost:5173',
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true,
   },
