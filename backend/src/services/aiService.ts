@@ -7,36 +7,42 @@ export const generateTaskSuggestions = async (
   existingTasks: string[]
 ): Promise<string[]> => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    // ✅ Try without 'models/' prefix
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
     const prompt = `
-You are a project management assistant. 
+You are a project management assistant helping a development team.
 
 Project Name: "${projectName}"
-Existing Tasks: ${existingTasks.length > 0 ? existingTasks.join(', ') : 'None yet'}
+Existing Tasks: ${existingTasks.length > 0 ? existingTasks.join(', ') : 'No tasks yet'}
 
-Based on this project, suggest 3 logical next tasks that would help complete this project.
+Based on this project, suggest 3 specific, actionable tasks that would help move this project forward.
 
-IMPORTANT: Return ONLY a valid JSON array of task titles, nothing else.
-Format: ["Task title 1", "Task title 2", "Task title 3"]
+IMPORTANT: Return ONLY a valid JSON array of task titles. No explanation, no markdown, no backticks.
+Format: ["Task 1", "Task 2", "Task 3"]
 
-Example for a "Mobile App" project:
-["Design user interface mockups", "Set up authentication system", "Create database schema"]
+Example for "Mobile App Development":
+["Design user interface mockups", "Set up authentication API", "Create database schema"]
 `;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
     
+    console.log('🤖 Gemini raw response:', text);
+    
     // Extract JSON from response
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    const jsonMatch = text.match(/\[[\s\S]*?\]/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      const suggestions = JSON.parse(jsonMatch[0]);
+      console.log('✅ Parsed suggestions:', suggestions);
+      return suggestions;
     }
     
+    console.log('⚠️ Could not parse JSON from response');
     return [];
   } catch (error) {
-    console.error('Gemini API error:', error);
+    console.error('❌ Gemini API error:', error);
     return [];
   }
 };
@@ -46,7 +52,8 @@ export const generateTaskDescription = async (
   projectName: string
 ): Promise<string> => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    // ✅ Consistent model name
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
     const prompt = `
 You are a project management assistant.
@@ -64,7 +71,7 @@ Return ONLY the description text, no formatting or extra text.
     const response = await result.response;
     return response.text().trim();
   } catch (error) {
-    console.error('Gemini API error:', error);
+    console.error('❌ Gemini API error:', error);
     return '';
   }
 };
@@ -74,7 +81,8 @@ export const generateProjectInsights = async (
   tasks: Array<{ title: string; status: string; priority: string }>
 ): Promise<string> => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    // ✅ FIXED: Use same model as others
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
     const todoCount = tasks.filter(t => t.status === 'TODO').length;
     const inProgressCount = tasks.filter(t => t.status === 'IN_PROGRESS').length;
@@ -97,7 +105,7 @@ Be encouraging but realistic.
     const response = await result.response;
     return response.text().trim();
   } catch (error) {
-    console.error('Gemini API error:', error);
+    console.error('❌ Gemini API error:', error);
     return '';
   }
 };
