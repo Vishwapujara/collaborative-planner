@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
-import { tasksAPI } from '../services/api';
+import { tasksAPI, aiAPI } from '../services/api';
 import socketService from '../services/socket';
 import type { KanbanBoard, Task } from '../types';
-import { Plus, Wifi, WifiOff } from 'lucide-react';
+import { Plus, Wifi, WifiOff, Sparkles, Loader } from 'lucide-react';
 import { getPriorityColor } from '../utils/helpers';
-import { TaskDetailModal } from '../components/task/TaskDetailModal';
+import { TaskDetailModal } from '../components/tasks/TaskDetailModal';
 
 export const Kanban: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -14,6 +14,9 @@ export const Kanban: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showSuggestModal, setShowSuggestModal] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [formData, setFormData] = useState({
     title: '',
@@ -50,21 +53,18 @@ export const Kanban: React.FC = () => {
     console.log('🔄 Real-time: Task updated', task);
     
     setBoard((prev) => {
-      // Remove from all columns
       const newBoard = {
         TODO: prev.TODO.filter(t => t.id !== task.id),
         IN_PROGRESS: prev.IN_PROGRESS.filter(t => t.id !== task.id),
         DONE: prev.DONE.filter(t => t.id !== task.id),
       };
       
-      // Add to correct column
       return {
         ...newBoard,
         [task.status]: [...newBoard[task.status], task],
       };
     });
 
-    // Update selected task if it's the one that was updated
     if (selectedTask && selectedTask.id === task.id) {
       setSelectedTask(task);
     }
@@ -79,7 +79,6 @@ export const Kanban: React.FC = () => {
       DONE: prev.DONE.filter(t => t.id !== data.id),
     }));
 
-    // Close modal if deleted task was open
     if (selectedTask && selectedTask.id === data.id) {
       setSelectedTask(null);
     }
@@ -89,13 +88,10 @@ export const Kanban: React.FC = () => {
   useEffect(() => {
     if (!projectId) return;
 
-    console.log('🔌 Setting up WebSocket for project:', projectId);
-
-    // Connect to WebSocket
     const socket = socketService.connect();
     
     socket.on('connect', () => {
-      console.log('✅ WebSocket connected, socket ID:', socket.id);
+      console.log('✅ WebSocket connected');
       setConnected(true);
     });
 
@@ -104,25 +100,13 @@ export const Kanban: React.FC = () => {
       setConnected(false);
     });
 
-    socket.on('connect_error', (error) => {
-      console.error('🔴 WebSocket connection error:', error);
-    });
-
-    // Join project room
     socketService.joinProject(projectId);
-
-    // Subscribe to events
-    console.log('👂 Subscribing to socket events...');
     socketService.onTaskCreated(handleTaskCreated);
     socketService.onTaskUpdated(handleTaskUpdated);
     socketService.onTaskDeleted(handleTaskDeleted);
-
-    // Fetch initial data
     fetchKanban();
 
-    // Cleanup
     return () => {
-      console.log('🧹 Cleaning up socket listeners');
       socketService.offTaskCreated(handleTaskCreated);
       socketService.offTaskUpdated(handleTaskUpdated);
       socketService.offTaskDeleted(handleTaskDeleted);
@@ -133,27 +117,55 @@ export const Kanban: React.FC = () => {
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      console.log('Creating task:', formData);
       await tasksAPI.create({
         ...formData,
         projectId: parseInt(projectId!),
       });
       setShowCreateModal(false);
       setFormData({ title: '', description: '', priority: 'medium' });
-      // WebSocket will handle the update
     } catch (error) {
       console.error('Error creating task:', error);
     }
   };
 
   const handleStatusChange = async (taskId: number, newStatus: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent opening task detail modal
+    e.stopPropagation();
     try {
-      console.log(`🔄 Updating task ${taskId} status to ${newStatus}`);
       await tasksAPI.update(taskId, { status: newStatus as any });
-      // WebSocket will handle the update
     } catch (error) {
       console.error('Error updating task:', error);
+    }
+  };
+
+  // ✨ NEW: AI Suggestion Handler
+  const handleAISuggest = async () => {
+    setAiLoading(true);
+    setShowSuggestModal(true);
+    setAiSuggestions([]);
+
+    try {
+      const response = await aiAPI.suggestTasks(parseInt(projectId!));
+      setAiSuggestions(response.data.suggestions);
+    } catch (error) {
+      console.error('AI suggestion error:', error);
+      setAiSuggestions(['Failed to generate suggestions. Please try again.']);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // ✨ NEW: Add suggested task with one click
+  const handleAddSuggestedTask = async (suggestion: string) => {
+    try {
+      await tasksAPI.create({
+        title: suggestion,
+        projectId: parseInt(projectId!),
+        priority: 'medium',
+      });
+      // Remove from suggestions
+      setAiSuggestions(prev => prev.filter(s => s !== suggestion));
+    } catch (error) {
+      console.error('Error creating task:', error);
     }
   };
 
@@ -181,7 +193,6 @@ export const Kanban: React.FC = () => {
         )}
       </div>
 
-      {/* Quick status change buttons */}
       <div className="flex gap-2 text-xs">
         {task.status !== 'TODO' && (
           <button
@@ -252,13 +263,25 @@ export const Kanban: React.FC = () => {
             </div>
             <p className="mt-2 text-gray-600">Real-time collaborative task management.</p>
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn btn-primary flex items-center"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Task
-          </button>
+          
+          {/* ✨ Action Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={handleAISuggest}
+              className="btn btn-secondary flex items-center"
+              disabled={aiLoading}
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              AI Suggest Tasks
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="btn btn-primary flex items-center"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Task
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -332,6 +355,91 @@ export const Kanban: React.FC = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* ✨ NEW: AI Suggestions Modal */}
+        {showSuggestModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-purple-100 rounded-lg">
+                    <Sparkles className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">AI Task Suggestions</h2>
+                    <p className="text-sm text-gray-600">Powered by Google Gemini</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSuggestModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Loading State */}
+              {aiLoading && (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader className="h-12 w-12 text-purple-600 animate-spin mb-4" />
+                  <p className="text-gray-600">AI is analyzing your project...</p>
+                </div>
+              )}
+
+              {/* Suggestions List */}
+              {!aiLoading && aiSuggestions.length > 0 && (
+                <div className="space-y-3">
+                  {aiSuggestions.map((suggestion, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-purple-300 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="flex items-center justify-center w-6 h-6 bg-purple-100 text-purple-600 rounded-full text-xs font-semibold">
+                            {index + 1}
+                          </span>
+                          <h3 className="font-medium text-gray-900">{suggestion}</h3>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => handleAddSuggestedTask(suggestion)}
+                        className="ml-4 px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Task
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!aiLoading && aiSuggestions.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">No suggestions available</p>
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-gray-500">
+                    💡 Click "Add Task" to create task instantly
+                  </p>
+                  <button
+                    onClick={() => setShowSuggestModal(false)}
+                    className="btn btn-secondary text-sm"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

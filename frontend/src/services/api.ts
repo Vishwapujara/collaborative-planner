@@ -117,4 +117,12 @@ export const commentsAPI = {
     api.delete<{ message: string }>(`/comments/${id}`),
 };
 
+// AI
+export const aiAPI = {
+  suggestTasks: (projectId: number) =>
+    api.get<{ suggestions: string[] }>(`/ai/suggest/${projectId}`),
+  
+  generateInsights: (projectId: number) =>
+    api.get<{ insights: string }>(`/ai/insights/${projectId}`),
+};
 export default api;
